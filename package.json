@@ -1,0 +1,106 @@
+{
+  "name": "vidyut",
+  "displayName": "VIDYUT",
+  "description": "Write Turbo C graphics.h and conio.h code in VS Code and watch it draw, with no DOSBox and no Turbo C install.",
+  "version": "1.0.0",
+  "publisher": "KANAKPRABHAKAR",
+  "license": "MIT",
+  "engines": { "vscode": "^1.75.0" },
+  "categories": ["Programming Languages", "Education", "Visualization"],
+  "keywords": [
+    "graphics.h", "conio.h", "turbo c", "turboc", "bgi", "borland",
+    "c", "c++", "computer graphics", "dosbox", "student", "lab"
+  ],
+  "icon": "media/icon.png",
+  "galleryBanner": { "color": "#0000A8", "theme": "dark" },
+  "activationEvents": ["onLanguage:c", "onLanguage:cpp"],
+  "main": "./src/extension.js",
+  "contributes": {
+    "commands": [
+      { "command": "vidyut.run", "title": "VIDYUT: Run and Draw", "icon": "$(play)" },
+      { "command": "vidyut.stop", "title": "VIDYUT: Stop Running Program", "icon": "$(debug-stop)" },
+      { "command": "vidyut.openExample", "title": "VIDYUT: Open an Example" },
+      { "command": "vidyut.setUpProject", "title": "VIDYUT: Set Up This Folder for graphics.h" },
+      { "command": "vidyut.savePng", "title": "VIDYUT: Save Picture as PNG" },
+      { "command": "vidyut.checkCompiler", "title": "VIDYUT: Check My Compiler" }
+    ],
+    "keybindings": [
+      {
+        "command": "vidyut.run",
+        "key": "ctrl+alt+g",
+        "mac": "cmd+alt+g",
+        "when": "editorLangId == c || editorLangId == cpp"
+      },
+      {
+        "command": "vidyut.stop",
+        "key": "ctrl+alt+x",
+        "mac": "cmd+alt+x",
+        "when": "vidyut.running"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "vidyut.run",
+          "when": "editorLangId == c || editorLangId == cpp",
+          "group": "navigation@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "vidyut.run",
+          "when": "editorLangId == c || editorLangId == cpp",
+          "group": "vidyut@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "VIDYUT",
+      "properties": {
+        "vidyut.compilerC": {
+          "type": "string",
+          "default": "gcc",
+          "description": "Command used to compile .c files. Leave as gcc unless your compiler is under another name."
+        },
+        "vidyut.compilerCpp": {
+          "type": "string",
+          "default": "g++",
+          "description": "Command used to compile .cpp and .cc files."
+        },
+        "vidyut.extraCompilerArgs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Extra arguments passed to the compiler, for example -Wall."
+        },
+        "vidyut.zoom": {
+          "type": "string",
+          "enum": ["fit", "1", "2", "3"],
+          "default": "fit",
+          "description": "How the picture is sized in the panel."
+        },
+        "vidyut.smoothing": {
+          "type": "boolean",
+          "default": false,
+          "description": "Smooth the picture when it is scaled up. Off keeps pixels sharp, which is how a real VGA screen looked."
+        },
+        "vidyut.runTimeout": {
+          "type": "number",
+          "default": 120,
+          "description": "Seconds before a program that never finishes is stopped. Set 0 to never stop it."
+        },
+        "vidyut.openPanelBeside": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open the picture next to your code rather than over it."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node test/run-tests.js",
+    "package": "npx @vscode/vsce package"
+  },
+  "repository": { "type": "git", "url": "https://github.com/Kanak234/vidyut" },
+  "devDependencies": {}
+}

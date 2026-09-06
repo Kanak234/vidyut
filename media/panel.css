@@ -1,0 +1,213 @@
+/* The panel borrows the Turbo C 3.0 IDE's own palette and chrome, because
+   that is the world this extension's users are coming from. */
+
+:root {
+  --tc-blue:   #0000a8;
+  --tc-deep:   #00005c;
+  --tc-cyan:   #00a8a8;
+  --tc-yellow: #fcfc54;
+  --tc-gray:   #a8a8a8;
+  --tc-white:  #fcfcfc;
+  --tc-red:    #a80000;
+  --tc-green:  #54fc54;
+
+  --mono: "IBM Plex Mono", "Cascadia Mono", "Consolas", "DejaVu Sans Mono",
+          "Menlo", ui-monospace, monospace;
+
+  --cell: 8px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--tc-blue);
+  color: var(--tc-gray);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow: hidden;
+}
+
+.frame {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  padding: 10px 12px 0;
+  gap: 8px;
+}
+
+/* ---- title ---- */
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--tc-yellow);
+}
+
+.titlebar h1 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* The double rule is the IDE's ═ border, drawn rather than typed so it
+   scales cleanly to any width. */
+.titlebar .rule {
+  flex: 1;
+  height: 5px;
+  border-top: 1px solid var(--tc-cyan);
+  border-bottom: 1px solid var(--tc-cyan);
+}
+
+/* ---- screen ---- */
+
+.screen {
+  position: relative;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  background: #000;
+  border: 3px double var(--tc-cyan);
+  padding: 6px;
+  overflow: auto;
+}
+
+#canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #000;
+  max-width: 100%;
+  max-height: 100%;
+  outline: none;
+}
+
+#canvas.smooth { image-rendering: auto; }
+
+#canvas:focus-visible {
+  outline: 2px solid var(--tc-yellow);
+  outline-offset: 2px;
+}
+
+.screen.grid #canvas {
+  /* One faint line per source pixel, only legible once zoomed in. */
+  background-image:
+    repeating-linear-gradient(to right,  rgba(0,168,168,.35) 0 1px, transparent 1px var(--cell)),
+    repeating-linear-gradient(to bottom, rgba(0,168,168,.35) 0 1px, transparent 1px var(--cell));
+}
+
+.hint {
+  position: absolute;
+  margin: 0;
+  padding: 0 14px;
+  color: var(--tc-cyan);
+  text-align: center;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
+.hint[hidden] { display: none; }
+
+/* ---- console ---- */
+
+.console {
+  max-height: 8.5em;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 8px;
+  background: var(--tc-deep);
+  border-left: 2px solid var(--tc-cyan);
+  color: var(--tc-white);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  scrollbar-width: thin;
+}
+
+.console:empty { display: none; }
+.console .err  { color: #ff8a8a; }
+.console .note { color: var(--tc-cyan); }
+
+/* ---- status bar ---- */
+
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 -12px;
+  padding: 4px 12px;
+  background: var(--tc-cyan);
+  color: #000;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.statusbar .spacer { flex: 1; }
+
+.state {
+  padding: 1px 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: #000;
+  color: var(--tc-gray);
+  white-space: nowrap;
+}
+
+.state[data-state="running"] { color: var(--tc-green); }
+.state[data-state="waiting"] { color: var(--tc-yellow); }
+.state[data-state="error"]   { color: #ff8a8a; }
+.state[data-state="done"]    { color: var(--tc-white); }
+
+.coords {
+  min-width: 22ch;
+  color: #003c3c;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Function-key hints, reversed the way the real status line showed them. */
+.fkey {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #000;
+  font: inherit;
+  letter-spacing: inherit;
+  padding: 1px 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fkey b {
+  display: inline-block;
+  padding: 0 4px;
+  margin-right: 5px;
+  background: #000;
+  color: var(--tc-yellow);
+  font-weight: 400;
+}
+
+.fkey:hover      { background: rgba(0, 0, 0, 0.16); }
+.fkey:focus-visible {
+  outline: 2px solid #000;
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+@media (max-width: 560px) {
+  .titlebar h1 { letter-spacing: 0.08em; }
+  .coords { min-width: 0; }
+  .fkey b { margin-right: 3px; }
+}
