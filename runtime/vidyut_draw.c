@@ -1,3 +1,4 @@
+#include <stdint.h>
 /* vidyut_draw.c - the rasteriser.
  * Part of VIDYUT. MIT licence.
  */
@@ -6,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
+static void fill_poly_interior(int n, const int *pts);
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -385,12 +388,11 @@ void drawpoly(int n, const int *pts)
     vg_tick();
 }
 
-void fillpoly(int n, const int *pts)
+static void fill_poly_interior(int n, const int *pts)
 {
     int ymin, ymax, y, i, count;
     int *xs;
 
-    vg_ensure_init();
     if (n < 3 || !pts) return;
 
     ymin = ymax = pts[1];
@@ -408,12 +410,10 @@ void fillpoly(int n, const int *pts)
             int y1 = pts[i*2+1], y2 = pts[j*2+1];
             int x1 = pts[i*2],   x2 = pts[j*2];
             if (y1 == y2) continue;
-            /* Half-open rule: a vertex counts for the edge below it only,
-             * so shared vertices do not double-count. */
             if ((y >= y1 && y < y2) || (y >= y2 && y < y1))
                 xs[count++] = x1 + (y - y1) * (x2 - x1) / (y2 - y1);
         }
-        for (i = 1; i < count; i++) {          /* insertion sort */
+        for (i = 1; i < count; i++) {
             int k = xs[i], j = i - 1;
             while (j >= 0 && xs[j] > k) { xs[j+1] = xs[j]; j--; }
             xs[j+1] = k;
@@ -422,7 +422,13 @@ void fillpoly(int n, const int *pts)
             vg_fill_span(xs[i], xs[i+1], y, 0, 0);
     }
     free(xs);
+}
 
+void fillpoly(int n, const int *pts)
+{
+    int i;
+    vg_ensure_init();
+    fill_poly_interior(n, pts);
     /* Turbo C outlines a filled polygon in the current colour. */
     for (i = 0; i < n; i++) {
         int j = (i + 1) % n;
@@ -441,8 +447,9 @@ void floodfill(int sx, int sy, int border)
 {
     VPt *stack;
     long cap, sp = 0;
-    int seed, left, right, x, ax, ay;
+    int seed, left, right, x, ay;
     int vw, vh;
+    uint8_t *visited;
 
     vg_ensure_init();
     vw = vg.vp.right - vg.vp.left + 1;
@@ -453,30 +460,38 @@ void floodfill(int sx, int sy, int border)
     seed = vg_peek(sx + vg.vp.left, sy + vg.vp.top);
     if (seed == border) return;
 
+    visited = (uint8_t *)calloc((size_t)((vw * vh + 7) / 8), 1);
+    if (!visited) { vg.result = grNoFloodMem; return; }
+
+#define V_GET(vx, vy) (visited[((vy) * vw + (vx)) >> 3] & (1 << (((vy) * vw + (vx)) & 7)))
+#define V_SET(vx, vy) (visited[((vy) * vw + (vx)) >> 3] |= (1 << (((vy) * vw + (vx)) & 7)))
+
     cap   = (long)vw * vh / 4 + 64;
     stack = (VPt *)malloc(sizeof(VPt) * (size_t)cap);
-    if (!stack) { vg.result = grNoFloodMem; return; }
+    if (!stack) { free(visited); vg.result = grNoFloodMem; return; }
 
     stack[sp].x = sx; stack[sp].y = sy; sp++;
+    V_SET(sx, sy);
 
     while (sp > 0) {
         VPt p = stack[--sp];
-        ax = p.x + vg.vp.left; ay = p.y + vg.vp.top;
+        ay = p.y + vg.vp.top;
         if (p.y < 0 || p.y >= vh) continue;
-        if (vg_peek(ax, ay) == border) continue;
-        if (vg_peek(ax, ay) != seed)   continue;
+        if (vg_peek(p.x + vg.vp.left, ay) == border) continue;
 
         left = p.x;
         while (left > 0) {
             int c = vg_peek(left - 1 + vg.vp.left, ay);
-            if (c == border || c != seed) break;
+            if (c == border || V_GET(left - 1, p.y)) break;
             left--;
+            V_SET(left, p.y);
         }
         right = p.x;
         while (right < vw - 1) {
             int c = vg_peek(right + 1 + vg.vp.left, ay);
-            if (c == border || c != seed) break;
+            if (c == border || V_GET(right + 1, p.y)) break;
             right++;
+            V_SET(right, p.y);
         }
         vg_fill_span(left, right, p.y, 0, 0);
 
@@ -487,23 +502,28 @@ void floodfill(int sx, int sy, int border)
                 int ny = p.y + dy;
                 int c;
                 if (ny < 0 || ny >= vh) continue;
+                if (V_GET(x, ny)) continue;
                 c = vg_peek(x + vg.vp.left, ny + vg.vp.top);
-                if (c != seed || c == border) continue;
-                if (x > left) {
+                if (c == border) continue;
+                if (x > left && !V_GET(x - 1, ny)) {
                     int cp = vg_peek(x - 1 + vg.vp.left, ny + vg.vp.top);
-                    if (cp == seed && cp != border) continue;  /* same run */
+                    if (cp != border) continue;  /* same run */
                 }
+                V_SET(x, ny);
                 if (sp >= cap) {
                     cap *= 2;
                     { VPt *g = (VPt *)realloc(stack, sizeof(VPt) * (size_t)cap);
-                      if (!g) { free(stack); vg.result = grNoFloodMem; return; }
+                      if (!g) { free(stack); free(visited); vg.result = grNoFloodMem; return; }
                       stack = g; }
                 }
                 stack[sp].x = x; stack[sp].y = ny; sp++;
             }
         }
     }
+#undef V_GET
+#undef V_SET
     free(stack);
+    free(visited);
     vg_tick();
 }
 

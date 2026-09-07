@@ -98,10 +98,10 @@ console.log('VIDYUT runtime tests\n');
 console.log('screen and protocol');
 {
   const r = build('screen', `
+#include <stdio.h>
 #include <graphics.h>
 int main(void){int gd=DETECT,gm;initgraph(&gd,&gm,"");
 printf("%d %d\\n",getmaxx(),getmaxy());closegraph();return 0;}
-#include <stdio.h>
 `);
   check('compiles', !r.compileError, r.compileError);
   if (!r.compileError) {
