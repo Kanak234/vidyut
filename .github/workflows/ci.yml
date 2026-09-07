@@ -1,0 +1,39 @@
+name: CI
+
+# Validate VIDYUT using its repository-provided tests and JavaScript parser.
+# No compiler execution or graphical runtime is started on the CI runner.
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # The package has no committed dependency lockfile and exposes a test script.
+      # npm install therefore resolves the declared package manifest without relying
+      # on a missing lockfile.
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      # Parse extension sources without launching VS Code or invoking a compiler.
+      - name: Validate JavaScript syntax
+        run: |
+          node --check src/extension.js
+          node --check test/run-tests.js
